@@ -72,6 +72,7 @@ private:
     void saveSettings();
 
     void appendLog(const QString& text);
+    void flushLogBuffer();
     void showWarning(const QString& text);
     void clearWarning();
 
@@ -252,6 +253,11 @@ private:
     QSettings settings_;
     QNetworkAccessManager* netManager_ = nullptr;
     QLabel* updateLabel_ = nullptr;
+
+    QStringList logBuffer_;
+    QTimer* logFlushTimer_ = nullptr;
+    QString cachedFwPath_;
+    bool cachedFwPathValid_ = false;
 };
 
 }

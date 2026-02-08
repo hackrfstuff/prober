@@ -80,6 +80,38 @@ QList<PortInfo> CliRunner::listPortsSync() {
     return result;
 }
 
+void CliRunner::listPortsAsync() {
+    if (portScanProc_) return;
+    if (!QFileInfo::exists(cliPath_)) {
+        emit portsListed({});
+        return;
+    }
+    portScanProc_ = new QProcess(this);
+    connect(portScanProc_, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this](int exitCode, QProcess::ExitStatus) {
+        QList<PortInfo> result;
+        if (exitCode == 0) {
+            QByteArray out = portScanProc_->readAllStandardOutput();
+            QJsonDocument doc = QJsonDocument::fromJson(out);
+            if (doc.isArray()) {
+                for (const auto& v : doc.array()) {
+                    if (!v.isObject()) continue;
+                    QJsonObject obj = v.toObject();
+                    PortInfo pi;
+                    pi.port = obj.value("port").toString();
+                    pi.description = obj.value("description").toString();
+                    pi.hwid = obj.value("hwid").toString();
+                    result.append(pi);
+                }
+            }
+        }
+        portScanProc_->deleteLater();
+        portScanProc_ = nullptr;
+        emit portsListed(result);
+    });
+    portScanProc_->start(cliPath_, {"--list-ports", "--json"});
+}
+
 bool CliRunner::startProcess(const QStringList& args, OpKind op) {
     if (isBusy()) return false;
 

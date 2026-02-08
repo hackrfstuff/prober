@@ -20,6 +20,7 @@ public:
     QString cliPath() const { return cliPath_; }
 
     QList<PortInfo> listPortsSync();
+    void listPortsAsync();
 
     bool startReadAll(const ConnectionOptions& conn, const ReadOptions& opts);
     bool startReadOne(const ConnectionOptions& conn, int escIndex1Based);
@@ -43,6 +44,7 @@ signals:
     void uiEvent(const QJsonObject& event);
     void logLine(const QString& stream, const QString& text);
     void processExited(int code, bool cancelled);
+    void portsListed(const QList<PortInfo>& ports);
 
 private slots:
     void onReadyReadStdout();
@@ -62,6 +64,7 @@ private:
 
     QString stdoutBuffer_;
     QString stderrBuffer_;
+    QProcess* portScanProc_ = nullptr;
 };
 
 }

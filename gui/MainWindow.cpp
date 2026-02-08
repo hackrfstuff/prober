@@ -14,6 +14,8 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkRequest>
+#include <QTextCursor>
+#include <QTextDocument>
 #include <QScrollArea>
 #include <QFrame>
 #include <QHeaderView>
@@ -21,8 +23,6 @@
 #include <QPainter>
 
 namespace gui {
-
-// Setting key lists replaced by SettingsMeta.h (commonSettingsMeta / advancedSettingsMeta)
 
 class EscItemDelegate : public QStyledItemDelegate {
 public:
@@ -125,9 +125,16 @@ MainWindow::MainWindow(QWidget* parent)
     setupUi();
     setupConnections();
     loadSettings();
-    onRefreshPorts();
     updateUiState();
     checkForUpdates();
+
+    // Defer port scan so the window paints first
+    QTimer::singleShot(0, this, [this]() {
+        portCombo_->addItem("Scanning...");
+        portCombo_->setEnabled(false);
+        refreshPortsBtn_->setEnabled(false);
+        cli_->listPortsAsync();
+    });
 }
 
 MainWindow::~MainWindow() {
@@ -544,6 +551,22 @@ void MainWindow::setupUi() {
 
 void MainWindow::setupConnections() {
     connect(refreshPortsBtn_, &QPushButton::clicked, this, &MainWindow::onRefreshPorts);
+    connect(cli_, &CliRunner::portsListed, this, [this](const QList<PortInfo>& ports) {
+        portCombo_->clear();
+        portCombo_->setEnabled(true);
+        refreshPortsBtn_->setEnabled(true);
+        if (ports.isEmpty()) {
+            appendLog("No ports found (check if CLI exists and serial devices are connected)");
+        } else {
+            appendLog(QString("Found %1 port(s)").arg(ports.size()));
+        }
+        for (const auto& p : ports) {
+            QString text = p.port;
+            if (!p.description.isEmpty()) text += " - " + p.description;
+            portCombo_->addItem(text, p.port);
+        }
+        updateUiState();
+    });
     connect(connectReadBtn_, &QPushButton::clicked, this, &MainWindow::onConnectAndRead);
     connect(cancelBtn_, &QPushButton::clicked, this, &MainWindow::onCancel);
 
@@ -650,7 +673,31 @@ void MainWindow::saveSettings() {
 }
 
 void MainWindow::appendLog(const QString& text) {
-    logView_->appendPlainText(text);
+    logBuffer_.append(text);
+    if (!logFlushTimer_) {
+        logFlushTimer_ = new QTimer(this);
+        logFlushTimer_->setSingleShot(true);
+        connect(logFlushTimer_, &QTimer::timeout, this, &MainWindow::flushLogBuffer);
+    }
+    if (!logFlushTimer_->isActive())
+        logFlushTimer_->start(50);
+}
+
+void MainWindow::flushLogBuffer() {
+    if (logBuffer_.isEmpty()) return;
+    logView_->setUpdatesEnabled(false);
+    for (const QString& line : logBuffer_)
+        logView_->appendPlainText(line);
+    // Cap at 8000 lines
+    QTextDocument* doc = logView_->document();
+    if (doc->blockCount() > 8000) {
+        QTextCursor cursor(doc);
+        cursor.movePosition(QTextCursor::Start);
+        cursor.movePosition(QTextCursor::Down, QTextCursor::KeepAnchor, doc->blockCount() - 8000);
+        cursor.removeSelectedText();
+    }
+    logBuffer_.clear();
+    logView_->setUpdatesEnabled(true);
 }
 
 void MainWindow::showWarning(const QString& text) {

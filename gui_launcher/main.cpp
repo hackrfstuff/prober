@@ -1,11 +1,9 @@
-// prober_gui launcher — tiny Win32 exe that launches the real Qt GUI
-// from tools\gui\prober_gui_impl.exe, keeping dist root clean.
+// Launcher stub that starts the real Qt GUI from tools\gui\.
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string>
 
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
-    // Get directory of this launcher exe
     char exePath[MAX_PATH];
     DWORD len = GetModuleFileNameA(NULL, exePath, MAX_PATH);
     if (len == 0 || len >= MAX_PATH) {
@@ -17,10 +15,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     auto slash = dir.find_last_of("\\/");
     if (slash != std::string::npos) dir.resize(slash);
 
-    // Build path to real GUI impl
     std::string implPath = dir + "\\tools\\gui\\prober_gui_impl.exe";
 
-    // Check if impl exists
     DWORD attr = GetFileAttributesA(implPath.c_str());
     if (attr == INVALID_FILE_ATTRIBUTES) {
         std::string msg = "Could not find:\n" + implPath + "\n\nMake sure the distribution is intact.";
@@ -28,10 +24,9 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         return 1;
     }
 
-    // Forward command line arguments
+    // Forward argv to the real exe
     std::string cmdLine = "\"" + implPath + "\"";
     LPSTR origArgs = GetCommandLineA();
-    // Skip past argv[0] in original command line
     if (origArgs) {
         bool inQuote = false;
         const char* p = origArgs;
@@ -47,14 +42,13 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         }
     }
 
-    // Set PATH to include tools\gui so Qt DLLs are found
+    // Prepend tools\gui to PATH for Qt DLLs
     std::string guiDir = dir + "\\tools\\gui";
     char oldPath[32768] = {};
     GetEnvironmentVariableA("PATH", oldPath, sizeof(oldPath));
     std::string newPath = guiDir + ";" + oldPath;
     SetEnvironmentVariableA("PATH", newPath.c_str());
 
-    // Launch the real GUI
     STARTUPINFOA si = {};
     si.cb = sizeof(si);
     PROCESS_INFORMATION pi = {};
@@ -73,13 +67,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         return 1;
     }
 
-    // Wait for the GUI to exit
-    WaitForSingleObject(pi.hProcess, INFINITE);
+    WaitForInputIdle(pi.hProcess, 2000);
 
-    DWORD exitCode = 0;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
 
-    return (int)exitCode;
+    return 0;
 }
