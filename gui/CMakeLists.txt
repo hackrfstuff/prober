@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui)
+find_package(Qt6 REQUIRED COMPONENTS Widgets Core Gui Network)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -23,9 +23,13 @@ target_link_libraries(prober_gui PRIVATE
     Qt6::Widgets
     Qt6::Core
     Qt6::Gui
+    Qt6::Network
 )
 
-target_include_directories(prober_gui PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(prober_gui PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_BINARY_DIR}/include
+)
 
 set_target_properties(prober_gui PROPERTIES
     WIN32_EXECUTABLE TRUE

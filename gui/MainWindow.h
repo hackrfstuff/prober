@@ -21,6 +21,8 @@
 #include <QSlider>
 #include <QStackedWidget>
 #include <QGridLayout>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include "SettingsMeta.h"
 
 namespace gui {
@@ -130,6 +132,9 @@ private:
 
     void doWriteNextEsc();
     void finishWriteBatch(bool success);
+
+    void checkForUpdates();
+    void onUpdateCheckFinished(QNetworkReply* reply);
 
     bool isCommFailure(const QString& error);
 
@@ -245,6 +250,8 @@ private:
     QMap<QString, int> pendingWrites_;
 
     QSettings settings_;
+    QNetworkAccessManager* netManager_ = nullptr;
+    QLabel* updateLabel_ = nullptr;
 };
 
 }

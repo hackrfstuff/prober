@@ -7,6 +7,7 @@
 #include "esctool/BluejaySettings.h"
 #include "esctool/C2Flasher.h"
 #include "esctool/IntelHex.h"
+#include "esctool/version.h"
 #include "transport/SerialWjwwood.h"
 
 #include <iostream>
@@ -52,6 +53,7 @@ static std::string pick_port(Log& log, const std::string& forced){
 }
 
 struct Args {
+  bool show_version=false;
   std::string port; int baud=115200; double timeout=1.0; double delay=0.0; bool timeout_user_set=false; bool delay_user_set=false; LogLevel level=LogLevel::INFO; bool trace=false; int probe_tries=6; double probe_sleep=0.15;
   int settle_ms=200;
   std::string hex; int index=-1; bool all=false; VerifyMode verify_mode=VerifyMode::NONE; bool erase_eeprom=false; std::string assume_sig;
@@ -102,7 +104,8 @@ static Args parse_args(int argc, char** argv){
   Args a; for(int i=1;i<argc;++i){
     auto eq = [&](const char* k){ return std::strcmp(argv[i],k)==0; };
     auto next = [&](){ return (i+1<argc)? argv[++i] : (char*)""; };
-    if (eq("--list-ports")) a.list_ports = true;
+    if (eq("--version")) a.show_version = true;
+    else if (eq("--list-ports")) a.list_ports = true;
     else if (eq("--json")) a.json = true;
     else if (eq("--ui-json")) a.ui_json = true;
     if (eq("--port")) a.port = next();
@@ -297,6 +300,11 @@ static void emit_port_list_json() {
 
 int main(int argc, char** argv){
   auto args = parse_args(argc, argv);
+
+  if (args.show_version) {
+    std::cout << "prober " << PROBER_VERSION << "\n";
+    return 0;
+  }
 
   if (args.list_ports) {
     try {

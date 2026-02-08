@@ -1,7 +1,17 @@
 cmake_minimum_required(VERSION 3.20)
-project(esctool CXX)
+project(esctool VERSION 1.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(PROBER_VERSION "${PROJECT_VERSION}")
+set(PROBER_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
+set(PROBER_VERSION_MINOR ${PROJECT_VERSION_MINOR})
+set(PROBER_VERSION_PATCH ${PROJECT_VERSION_PATCH})
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/esctool/version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/include/esctool/version.h
+)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
 option(ESCTOOL_WITH_DESKTOP_TRANSPORT "Build desktop serial transport (wjwwood/serial)" ON)
 

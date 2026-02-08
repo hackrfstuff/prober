@@ -206,6 +206,17 @@ Use with `--set KEY=VALUE` (for `--write-settings` or inline with flash):
 
 ---
 
+## Install (Windows)
+
+Download the latest release from [GitHub Releases](https://github.com/hackrfstuff/prober/releases).
+
+- **Installer** (`prober-x.x.x-setup.exe`) - installs to Program Files, creates Start Menu and desktop shortcuts, adds `prober` to system PATH, and auto-installs VC++ Redistributable if missing.
+- **Portable** (`prober-x.x.x-portable.zip`) - extract anywhere and run. VC++ Redistributable is included in the zip but must be installed separately if not already present.
+
+The GUI checks for updates on startup and will notify you when a new version is available.
+
+---
+
 ## Build
 
 Requires Visual Studio 2022+, CMake, Ninja. Qt 6.x for the GUI (optional).
@@ -245,12 +256,15 @@ dist/
   prober.exe
   prober_gui.exe
   vc_redist.x64.exe
+  prober-x.x.x-setup.exe   (if NSIS is installed)
   tools/
     gui/
     avrdude/
     c2_firmware/
     bluejay_firmware/
 ```
+
+The installer (`prober-x.x.x-setup.exe`) is built automatically if [NSIS](https://nsis.sourceforge.io/Download) is installed. Otherwise the package script skips that step.
 
 ---
 

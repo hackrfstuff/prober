@@ -187,6 +187,35 @@ if (Test-Path $GuiImplCheck) {
 }
 
 Write-Host ""
+Write-Host "[10/10] Building installer..." -ForegroundColor Yellow
+$NsisExe = $null
+$NsisPaths = @(
+    "C:\Program Files (x86)\NSIS\makensis.exe",
+    "C:\Program Files\NSIS\makensis.exe"
+)
+foreach ($p in $NsisPaths) {
+    if (Test-Path $p) { $NsisExe = $p; break }
+}
+if ($env:NSIS_PATH -and (Test-Path $env:NSIS_PATH)) { $NsisExe = $env:NSIS_PATH }
+
+$Version = (Select-String -Path "$RepoRoot\CMakeLists.txt" -Pattern 'project\(esctool VERSION (\S+)' | ForEach-Object { $_.Matches[0].Groups[1].Value })
+if (-not $Version) { $Version = "1.0.0" }
+
+if ($NsisExe) {
+    & $NsisExe /DVERSION=$Version "$RepoRoot\scripts\installer.nsi"
+    if ($LASTEXITCODE -eq 0) {
+        $InstallerPath = Join-Path $DistDir "prober-$Version-setup.exe"
+        if (Test-Path $InstallerPath) {
+            Write-Host "  Installer: $InstallerPath ($([math]::Round((Get-Item $InstallerPath).Length / 1MB, 1)) MB)" -ForegroundColor Green
+        }
+    } else {
+        Write-Host "  WARNING: NSIS build failed (exit code $LASTEXITCODE)" -ForegroundColor Red
+    }
+} else {
+    Write-Host "  SKIPPED: NSIS not found. Install NSIS or set NSIS_PATH env var." -ForegroundColor Yellow
+}
+
+Write-Host ""
 Write-Host "=== DIST READY ===" -ForegroundColor Green
 Write-Host "Location: $DistDir" -ForegroundColor Green
 Write-Host ""

@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "esctool/version.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -11,6 +12,8 @@
 #include <QDir>
 #include <QCoreApplication>
 #include <QJsonArray>
+#include <QJsonDocument>
+#include <QNetworkRequest>
 #include <QScrollArea>
 #include <QFrame>
 #include <QHeaderView>
@@ -108,7 +111,7 @@ MainWindow::MainWindow(QWidget* parent)
     , escModel_(new EscListModel(this))
     , settings_("prober", "GUI")
 {
-    setWindowTitle("prober - developed by @leszczzy");
+    setWindowTitle(QString("prober v%1 - developed by @leszczzy").arg(PROBER_VERSION));
     resize(1200, 800);
 
     helloTimer_ = new QTimer(this);
@@ -124,6 +127,7 @@ MainWindow::MainWindow(QWidget* parent)
     loadSettings();
     onRefreshPorts();
     updateUiState();
+    checkForUpdates();
 }
 
 MainWindow::~MainWindow() {
@@ -142,7 +146,11 @@ void MainWindow::setupUi() {
     topBar->setStyleSheet("background-color: #f4f4f5; border-bottom: 1px solid #e4e4e7;");
     QHBoxLayout* topBarLayout = new QHBoxLayout(topBar);
     topBarLayout->setContentsMargins(12, 8, 12, 8);
-    topBarLayout->addWidget(new QLabel("<b>prober</b>"));
+    topBarLayout->addWidget(new QLabel(QString("<b>prober v%1</b>").arg(PROBER_VERSION)));
+    updateLabel_ = new QLabel();
+    updateLabel_->setOpenExternalLinks(true);
+    updateLabel_->setVisible(false);
+    topBarLayout->addWidget(updateLabel_);
     topBarLayout->addStretch();
     traceCheck_ = new QCheckBox("Trace");
     autoVerifyCheck_ = new QCheckBox("Auto-verify");
@@ -2191,6 +2199,36 @@ void MainWindow::showFlashPostWriteNotice() {
         "then reconnect.\n\n"
         "Then run a normal Read (Read tab \u2192 Connect + Read).\n\n"
         "Without a power cycle, the next read may show stale/incorrect info.");
+}
+
+void MainWindow::checkForUpdates() {
+    netManager_ = new QNetworkAccessManager(this);
+    connect(netManager_, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateCheckFinished);
+    QNetworkRequest req(QUrl("https://api.github.com/repos/hackrfstuff/prober/releases/latest"));
+    req.setHeader(QNetworkRequest::UserAgentHeader, "prober-gui");
+    netManager_->get(req);
+}
+
+void MainWindow::onUpdateCheckFinished(QNetworkReply* reply) {
+    reply->deleteLater();
+    if (reply->error() != QNetworkReply::NoError) return;
+
+    QByteArray data = reply->readAll();
+    QJsonDocument doc = QJsonDocument::fromJson(data);
+    if (!doc.isObject()) return;
+
+    QString tag = doc.object().value("tag_name").toString();
+    if (tag.isEmpty()) return;
+
+    QString remote = tag.startsWith('v') ? tag.mid(1) : tag;
+    QString local = QString(PROBER_VERSION);
+    if (remote == local) return;
+
+    QString url = doc.object().value("html_url").toString();
+    updateLabel_->setText(
+        QString(" &nbsp; <a href='%1' style='color:#dc2626;'>Update available: v%2</a>")
+            .arg(url, remote));
+    updateLabel_->setVisible(true);
 }
 
 }
