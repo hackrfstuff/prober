@@ -1,0 +1,14 @@
+# Build
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.user
+CMakeUserPresets.json
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

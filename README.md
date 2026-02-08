@@ -203,3 +203,57 @@ Use with `--set KEY=VALUE` (for `--write-settings` or inline with flash):
 | `STARTUP_BEEP` | 0–3 | |
 | `DITHERING` | On / Off | |
 | `PWM_FREQUENCY` | 0 / 24 / 48 / 96 | 0=Dynamic |
+
+---
+
+## Build
+
+Requires Visual Studio 2022+, CMake, Ninja. Qt 6.x for the GUI (optional).
+
+### CLI only
+
+```sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+```
+
+### CLI + GUI
+
+```sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:/Qt/6.x.x/msvc2022_64"
+cmake --build build -j
+```
+
+### Portable distribution (Windows)
+
+The package script builds everything, deploys Qt runtime, bundles vc_redist, and runs sanity checks:
+
+```sh
+.\scripts\package_windows.ps1 -QtPath "C:\Qt\6.x.x\msvc2022_64"
+```
+
+Or via the .cmd wrapper:
+
+```sh
+.\scripts\package_windows.cmd -QtPath "C:\Qt\6.x.x\msvc2022_64"
+```
+
+Output goes to `dist/` with this layout:
+
+```
+dist/
+  prober.exe
+  prober_gui.exe
+  vc_redist.x64.exe
+  tools/
+    gui/
+    avrdude/
+    c2_firmware/
+    bluejay_firmware/
+```
+
+---
+
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).

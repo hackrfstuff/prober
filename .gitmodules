@@ -1,0 +1,3 @@
+[submodule "external/serial"]
+	path = external/serial
+	url = https://github.com/wjwwood/serial

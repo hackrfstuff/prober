@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.20)
+project(esctool CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+option(ESCTOOL_WITH_DESKTOP_TRANSPORT "Build desktop serial transport (wjwwood/serial)" ON)
+
+if(ESCTOOL_WITH_DESKTOP_TRANSPORT)
+  add_subdirectory(external/serial)
+endif()
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_library(esctool_core
+  src/Log.cpp
+  src/Utils.cpp
+  src/MSP.cpp
+  src/FourWay.cpp
+  src/Bluejay.cpp
+  src/BluejaySettings.cpp
+  src/IntelHex.cpp
+  src/Silabs.cpp
+  src/Flasher.cpp
+  src/C2Flasher.cpp
+)
+
+if(ESCTOOL_WITH_DESKTOP_TRANSPORT)
+  target_sources(esctool_core PRIVATE src/transport/SerialWjwwood.cpp)
+  target_include_directories(esctool_core PRIVATE src/transport)
+  target_link_libraries(esctool_core PRIVATE serial)
+endif()
+add_executable(prober_cli src/flasher_main.cpp)
+set_target_properties(prober_cli PROPERTIES OUTPUT_NAME "prober")
+target_include_directories(prober_cli PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/external/serial/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/transport
+)
+
+if(MSVC)
+  target_compile_options(esctool_core PRIVATE /W4)
+  target_compile_options(prober_cli PRIVATE /W4)
+else()
+  target_compile_options(esctool_core PRIVATE -Wall -Wextra -Wpedantic)
+  target_compile_options(prober_cli PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+target_link_libraries(prober_cli PRIVATE esctool_core)
+
+if(WIN32)
+  target_link_libraries(esctool_core PRIVATE setupapi)
+endif()
+
+option(BUILD_GUI "Build native Qt GUI" ON)
+if(BUILD_GUI)
+  add_subdirectory(gui)
+  add_subdirectory(gui_launcher)
+endif()
