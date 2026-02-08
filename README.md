@@ -6,6 +6,18 @@ Built in C++ with no runtime dependencies. Ships as a single portable binary (CL
 
 ---
 
+
+## Install (Windows)
+
+Download the latest release from [GitHub Releases](https://github.com/hackrfstuff/prober/releases).
+
+- **Installer** (`prober-x.x.x-setup.exe`) - installs to Program Files, creates Start Menu and desktop shortcuts, adds `prober` to system PATH, and auto-installs VC++ Redistributable if missing.
+- **Portable** (`prober-x.x.x-portable.zip`) - extract anywhere and run. VC++ Redistributable is included in the zip but must be installed separately if not already present.
+
+The GUI checks for updates on startup and will notify you when a new version is available.
+
+---
+
 ## Features
 
 ### Flashing
@@ -203,17 +215,6 @@ Use with `--set KEY=VALUE` (for `--write-settings` or inline with flash):
 | `STARTUP_BEEP` | 0–3 | |
 | `DITHERING` | On / Off | |
 | `PWM_FREQUENCY` | 0 / 24 / 48 / 96 | 0=Dynamic |
-
----
-
-## Install (Windows)
-
-Download the latest release from [GitHub Releases](https://github.com/hackrfstuff/prober/releases).
-
-- **Installer** (`prober-x.x.x-setup.exe`) - installs to Program Files, creates Start Menu and desktop shortcuts, adds `prober` to system PATH, and auto-installs VC++ Redistributable if missing.
-- **Portable** (`prober-x.x.x-portable.zip`) - extract anywhere and run. VC++ Redistributable is included in the zip but must be installed separately if not already present.
-
-The GUI checks for updates on startup and will notify you when a new version is available.
 
 ---
 
