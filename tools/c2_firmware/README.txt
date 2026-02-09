@@ -1,7 +1,7 @@
 C2 Interface Firmware
 =====================
 
-Origin:  arduino-c2-flasher (https://github.com/nicholasgasior/arduino-c2-flasher)
+Origin:  arduino-c2-flasher (https://github.com/stylesuxx/arduino-c2-flasher)
 Boards:  Arduino UNO / Nano (ATmega328P)
 File:    uno_nano.hex
 
