@@ -18,6 +18,27 @@ The GUI checks for updates on startup and will notify you when a new version is 
 
 ---
 
+## Install (Linux)
+
+Download the latest release from [GitHub Releases](https://github.com/hackrfstuff/prober/releases) and extract the archive:
+
+```sh
+tar -xzf prober-x.x.x-linux.tar.gz
+cd prober-x.x.x
+./prober --list-ports
+./prober_gui
+```
+
+**Serial port permissions:** Serial ports require group membership. Add your user and re-login:
+```sh
+# Arch
+sudo usermod -aG uucp $USER
+# Ubuntu/Debian
+sudo usermod -aG dialout $USER
+```
+
+---
+
 ## Features
 
 ### Flashing
@@ -260,14 +281,6 @@ dist/
 Run the GUI:
 ```sh
 ./dist/prober_gui
-```
-
-**Serial port permissions (Linux):** On most distros, serial ports are owned by the `dialout` group (Arch uses `uucp`). Add your user and re-login:
-```sh
-# Arch
-sudo usermod -aG uucp $USER
-# Ubuntu/Debian
-sudo usermod -aG dialout $USER
 ```
 
 ---
