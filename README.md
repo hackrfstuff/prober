@@ -220,52 +220,114 @@ Use with `--set KEY=VALUE` (for `--write-settings` or inline with flash):
 
 ## Build
 
-Requires Visual Studio 2022+, CMake, Ninja. Qt 6.x for the GUI (optional).
+### Linux
 
-### CLI only
+Requires `cmake`, `ninja`, a C++17 compiler, and Qt 6 for the GUI.
 
+On Arch:
+```sh
+sudo pacman -S cmake ninja gcc qt6-base
+```
+
+On Ubuntu/Debian:
+```sh
+sudo apt install cmake ninja-build g++ qt6-base-dev
+```
+
+**CLI only:**
+```sh
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+./build/prober --list-ports
+```
+
+**CLI + GUI — packaged distribution:**
+```sh
+./scripts/package_linux.sh
+```
+
+Output goes to `dist/`:
+```
+dist/
+  prober
+  prober_gui
+  tools/
+    gui/
+    c2_firmware/
+    bluejay_firmware/
+```
+
+Run the GUI:
+```sh
+./dist/prober_gui
+```
+
+**Serial port permissions (Linux):** On most distros, serial ports are owned by the `dialout` group (Arch uses `uucp`). Add your user and re-login:
+```sh
+# Arch
+sudo usermod -aG uucp $USER
+# Ubuntu/Debian
+sudo usermod -aG dialout $USER
+```
+
+---
+
+### Windows (native)
+
+Requires Visual Studio 2022+, CMake, Ninja, and Qt 6.x.
+
+**CLI only:**
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
 
-### CLI + GUI
-
+**CLI + GUI:**
 ```sh
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_PREFIX_PATH="C:/Qt/6.x.x/msvc2022_64"
 cmake --build build -j
 ```
 
-### Portable distribution (Windows)
-
-The package script builds everything, deploys Qt runtime, bundles vc_redist, and runs sanity checks:
-
+**Packaged distribution + installer:**
 ```sh
 .\scripts\package_windows.ps1 -QtPath "C:\Qt\6.x.x\msvc2022_64"
 ```
 
-Or via the .cmd wrapper:
-
+Or via the `.cmd` wrapper:
 ```sh
 .\scripts\package_windows.cmd -QtPath "C:\Qt\6.x.x\msvc2022_64"
 ```
 
-Output goes to `dist/` with this layout:
+---
+
+### Windows (cross-compile from Linux)
+
+Requires `mingw-w64` toolchain, `mingw-w64-qt6-base` (AUR on Arch), and `nsis` for the installer.
+
+On Arch:
+```sh
+sudo pacman -S mingw-w64-gcc
+yay -S mingw-w64-qt6-base nsis
+```
+
+Build and package:
+```sh
+./scripts/package_windows_cross.sh
+```
+
+Output goes to `dist/` with the same layout as the native Windows build, including `prober-x.x.x-setup.exe` if NSIS is available.
 
 ```
 dist/
   prober.exe
   prober_gui.exe
-  vc_redist.x64.exe
-  prober-x.x.x-setup.exe   (if NSIS is installed)
+  prober-x.x.x-setup.exe
   tools/
     gui/
     avrdude/
     c2_firmware/
     bluejay_firmware/
 ```
-
-The installer (`prober-x.x.x-setup.exe`) is built automatically if [NSIS](https://nsis.sourceforge.io/Download) is installed. Otherwise the package script skips that step.
 
 ---
 

@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "Theme.h"
 #include "esctool/version.h"
 
 #include <QVBoxLayout>
@@ -32,12 +33,14 @@ public:
         QStyleOptionViewItem opt = option;
         initStyleOption(&opt, index);
 
+        Theme th = currentTheme();
+
         painter->save();
 
         if (opt.state & QStyle::State_Selected) {
-            painter->fillRect(opt.rect, QColor("#e0e7ff"));
+            painter->fillRect(opt.rect, QColor(th.listSelectedBg));
         } else if (opt.state & QStyle::State_MouseOver) {
-            painter->fillRect(opt.rect, QColor("#f5f5f5"));
+            painter->fillRect(opt.rect, QColor(th.listHoverBg));
         }
 
         int x = opt.rect.left() + 8;
@@ -45,16 +48,16 @@ public:
         int h = opt.rect.height();
 
         QVariant reachVar = index.data(EscListModel::ReachableRole);
-        QColor dotColor("#9ca3af");
+        QColor dotColor(th.dotNeutral);
         if (reachVar.isValid()) {
-            dotColor = reachVar.toBool() ? QColor("#22c55e") : QColor("#ef4444");
+            dotColor = reachVar.toBool() ? QColor(th.dotOk) : QColor(th.dotFail);
         }
         painter->setBrush(dotColor);
         painter->setPen(Qt::NoPen);
         painter->drawEllipse(QPoint(x + 5, y + h / 2), 5, 5);
 
         x += 18;
-        painter->setPen(Qt::black);
+        painter->setPen(QColor(th.listItemText));
         QFont font = opt.font;
         font.setBold(true);
         painter->setFont(font);
@@ -68,19 +71,19 @@ public:
         QColor badgeBg, badgeFg;
         switch (status) {
             case EscStatus::Ok:
-                badgeBg = QColor("#dcfce7"); badgeFg = QColor("#166534"); break;
+                badgeBg = QColor(th.badgeOkBg); badgeFg = QColor(th.badgeOkFg); break;
             case EscStatus::Unstable:
-                badgeBg = QColor("#fef3c7"); badgeFg = QColor("#92400e"); break;
+                badgeBg = QColor(th.badgeWarnBg); badgeFg = QColor(th.badgeWarnFg); break;
             case EscStatus::Fail:
-                badgeBg = QColor("#fee2e2"); badgeFg = QColor("#991b1b"); break;
+                badgeBg = QColor(th.badgeFailBg); badgeFg = QColor(th.badgeFailFg); break;
             case EscStatus::Reading:
             case EscStatus::Writing:
             case EscStatus::Flashing:
-                badgeBg = QColor("#dbeafe"); badgeFg = QColor("#1e40af"); break;
+                badgeBg = QColor(th.badgeBusyBg); badgeFg = QColor(th.badgeBusyFg); break;
             case EscStatus::Queued:
-                badgeBg = QColor("#fef3c7"); badgeFg = QColor("#92400e"); break;
+                badgeBg = QColor(th.badgeWarnBg); badgeFg = QColor(th.badgeWarnFg); break;
             default:
-                badgeBg = QColor("#f3f4f6"); badgeFg = QColor("#374151"); break;
+                badgeBg = QColor(th.badgeDefaultBg); badgeFg = QColor(th.badgeDefaultFg); break;
         }
 
         QFontMetrics fm(opt.font);
@@ -149,8 +152,10 @@ void MainWindow::setupUi() {
     rootLayout->setContentsMargins(0, 0, 0, 0);
     rootLayout->setSpacing(0);
 
+    Theme th = currentTheme();
+
     QWidget* topBar = new QWidget();
-    topBar->setStyleSheet("background-color: #f4f4f5; border-bottom: 1px solid #e4e4e7;");
+    topBar->setStyleSheet(QString("background-color: %1; border-bottom: 1px solid %2;").arg(th.topBarBg, th.topBarBorder));
     QHBoxLayout* topBarLayout = new QHBoxLayout(topBar);
     topBarLayout->setContentsMargins(12, 8, 12, 8);
     topBarLayout->addWidget(new QLabel(QString("<b>prober v%1</b>").arg(PROBER_VERSION)));
@@ -216,9 +221,9 @@ void MainWindow::setupUi() {
 
     QHBoxLayout* btnRow = new QHBoxLayout();
     connectReadBtn_ = new QPushButton("Connect && Read");
-    connectReadBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+    connectReadBtn_->setStyleSheet(primaryButtonStyle(th));
     cancelBtn_ = new QPushButton("Cancel");
-    cancelBtn_->setStyleSheet("QPushButton { padding: 8px 16px; border: 1px solid #d4d4d8; border-radius: 4px; } QPushButton:hover { background-color: #f4f4f5; }");
+    cancelBtn_->setStyleSheet(secondaryButtonStyle(th));
     btnRow->addWidget(connectReadBtn_);
     btnRow->addWidget(cancelBtn_);
     leftLayout->addLayout(btnRow);
@@ -229,7 +234,7 @@ void MainWindow::setupUi() {
     escListView_->setModel(escModel_);
     escListView_->setItemDelegate(new EscItemDelegate(escListView_));
     escListView_->setSelectionMode(QAbstractItemView::SingleSelection);
-    escListView_->setStyleSheet("QListView { border: 1px solid #e4e4e7; border-radius: 4px; background: white; }");
+    escListView_->setStyleSheet(QString("QListView { border: 1px solid %1; border-radius: 4px; background: %2; }").arg(th.border, th.listBg));
     escLayout->addWidget(escListView_);
     leftLayout->addWidget(escGroup, 1);
 
@@ -240,7 +245,11 @@ void MainWindow::setupUi() {
     centerLayout->setContentsMargins(0, 12, 0, 12);
 
     tabWidget_ = new QTabWidget();
-    tabWidget_->setStyleSheet("QTabWidget::pane { border: 1px solid #e4e4e7; background: white; } QTabBar::tab { padding: 8px 16px; } QTabBar::tab:selected { background: white; border-bottom: 2px solid #18181b; }");
+    tabWidget_->setStyleSheet(QString(
+        "QTabWidget::pane { border: 1px solid %1; background: %2; }"
+        "QTabBar::tab { padding: 8px 16px; color: %4; }"
+        "QTabBar::tab:selected { background: %2; border-bottom: 2px solid %3; }")
+        .arg(th.tabPaneBorder, th.tabPaneBg, th.tabSelectedIndicator, th.textPrimary));
 
     settingsTab_ = new QWidget();
     QVBoxLayout* settingsLayout = new QVBoxLayout(settingsTab_);
@@ -267,7 +276,7 @@ void MainWindow::setupUi() {
 
     settingsAdvancedToggle_ = new QPushButton("Advanced (click to expand)");
     settingsAdvancedToggle_->setFlat(true);
-    settingsAdvancedToggle_->setStyleSheet("text-align: left; padding: 4px;");
+    settingsAdvancedToggle_->setStyleSheet(QString("text-align: left; padding: 4px; color: %1;").arg(th.textPrimary));
     settingsLayout->addWidget(settingsAdvancedToggle_);
 
     settingsAdvancedWidget_ = new QWidget();
@@ -289,7 +298,7 @@ void MainWindow::setupUi() {
     QHBoxLayout* writeRow = new QHBoxLayout();
     writeRow->addStretch();
     writeBtn_ = new QPushButton("Write changes");
-    writeBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+    writeBtn_->setStyleSheet(primaryButtonStyle(th));
     writeRow->addWidget(writeBtn_);
     settingsLayout->addLayout(writeRow);
     settingsLayout->addStretch();
@@ -348,7 +357,7 @@ void MainWindow::setupUi() {
 
     flashAdvancedToggle_ = new QPushButton("Advanced (click to expand)");
     flashAdvancedToggle_->setFlat(true);
-    flashAdvancedToggle_->setStyleSheet("text-align: left; padding: 4px;");
+    flashAdvancedToggle_->setStyleSheet(QString("text-align: left; padding: 4px; color: %1;").arg(th.textPrimary));
     flashLayout->addWidget(flashAdvancedToggle_);
 
     flashAdvancedWidget_ = new QWidget();
@@ -357,7 +366,7 @@ void MainWindow::setupUi() {
     flashSkipMissingCheck_->setChecked(true);
     flashSlowSwitchingCheck_ = new QCheckBox("Slow ESC switching (recommended for some AIOs)");
     flashEraseEepromCheck_ = new QCheckBox("Erase EEPROM");
-    flashEraseEepromCheck_->setStyleSheet("color: #b45309;");
+    flashEraseEepromCheck_->setStyleSheet(QString("color: %1;").arg(th.dirtyIndicator));
     flashFullEraseAppCheck_ = new QCheckBox("Full erase app");
     flashFullEraseEntireAppCheck_ = new QCheckBox("Full erase entire app");
     flashVerifyAllBytesCheck_ = new QCheckBox("Verify all bytes");
@@ -408,7 +417,7 @@ void MainWindow::setupUi() {
     flashBtnRow->addWidget(flashProgressLabel_);
     flashBtnRow->addStretch();
     flashBtn_ = new QPushButton("Flash");
-    flashBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+    flashBtn_->setStyleSheet(primaryButtonStyle(th));
     flashBtnRow->addWidget(flashBtn_);
     flashLayout->addLayout(flashBtnRow);
     flashLayout->addStretch();
@@ -454,7 +463,7 @@ void MainWindow::setupUi() {
     c2ReadInfoBtn_ = new QPushButton("Read Target Info");
     c2InfoRow->addWidget(c2ReadInfoBtn_);
     c2DeviceInfoLabel_ = new QLabel("Not connected");
-    c2DeviceInfoLabel_->setStyleSheet("color: #71717a;");
+    c2DeviceInfoLabel_->setStyleSheet(QString("color: %1;").arg(th.textMuted));
     c2InfoRow->addWidget(c2DeviceInfoLabel_, 1);
     c2InfoLayout->addLayout(c2InfoRow);
     c2Layout->addWidget(c2InfoGroup);
@@ -508,7 +517,7 @@ void MainWindow::setupUi() {
     c2CancelBatchBtn_->setVisible(false);
     c2WriteBtnRow->addWidget(c2CancelBatchBtn_);
     c2WriteBtn_ = new QPushButton("Erase + Write");
-    c2WriteBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+    c2WriteBtn_->setStyleSheet(primaryButtonStyle(th));
     c2WriteBtnRow->addWidget(c2WriteBtn_);
     c2WriteLayout->addLayout(c2WriteBtnRow);
     c2Layout->addWidget(c2WriteGroup);
@@ -532,21 +541,21 @@ void MainWindow::setupUi() {
     rightLayout->addLayout(logHeader);
 
     warningLabel_ = new QLabel();
-    warningLabel_->setStyleSheet("background-color: #fef3c7; color: #92400e; padding: 8px; border-radius: 4px;");
+    warningLabel_->setStyleSheet(QString("background-color: %1; color: %2; padding: 8px; border-radius: 4px;").arg(th.warningBg, th.warningFg));
     warningLabel_->setWordWrap(true);
     warningLabel_->setVisible(false);
     rightLayout->addWidget(warningLabel_);
 
     logView_ = new QPlainTextEdit();
     logView_->setReadOnly(true);
-    logView_->setStyleSheet("QPlainTextEdit { background-color: #18181b; color: #fafafa; font-family: monospace; font-size: 11px; border-radius: 4px; }");
+    logView_->setStyleSheet(QString("QPlainTextEdit { background-color: %1; color: %2; font-family: monospace; font-size: 11px; border-radius: 4px; }").arg(th.logBg, th.logFg));
     logView_->setMaximumBlockCount(1000);
     rightLayout->addWidget(logView_, 1);
 
     splitter->addWidget(rightPanel);
     splitter->setSizes({280, 500, 350});
 
-    setStyleSheet("QMainWindow { background-color: #fafafa; } QGroupBox { font-weight: bold; border: 1px solid #e4e4e7; border-radius: 4px; margin-top: 8px; padding-top: 8px; } QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 4px; }");
+    setStyleSheet(globalStyleSheet(th));
 }
 
 void MainWindow::setupConnections() {
@@ -637,10 +646,10 @@ void MainWindow::loadSettings() {
         QString fwPath = firmwarePathEdit_->text();
         if (!fwPath.isEmpty() && QFileInfo::exists(fwPath)) {
             firmwareStatusLabel_->setText(QString::fromUtf8("\u2713 File exists"));
-            firmwareStatusLabel_->setStyleSheet("color: #16a34a;");
+            firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
         } else if (!fwPath.isEmpty()) {
             firmwareStatusLabel_->setText(QString::fromUtf8("\u2717 File not found"));
-            firmwareStatusLabel_->setStyleSheet("color: #dc2626;");
+            firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
         }
     }
     // Apply bundled mode UI state
@@ -838,7 +847,7 @@ void MainWindow::buildSettingRows(int layoutVersion) {
 
         // Dirty indicator
         QLabel* dirtyLbl = new QLabel();
-        dirtyLbl->setStyleSheet("color: #f59e0b; font-weight: bold;");
+        dirtyLbl->setStyleSheet(QString("color: %1; font-weight: bold;").arg(currentTheme().dirtyIndicator));
 
         // Build friendly widget
         QWidget* friendlyWidget = nullptr;
@@ -914,7 +923,7 @@ void MainWindow::buildSettingRows(int layoutVersion) {
 
         if (meta.key == "MOTOR_DIRECTION") {
             motorDir3dWarning_ = new QLabel("3D mode value detected. Switch to Raw mode to edit.");
-            motorDir3dWarning_->setStyleSheet("color: #b45309; font-size: 11px;");
+            motorDir3dWarning_->setStyleSheet(QString("color: %1; font-size: 11px;").arg(currentTheme().dirtyIndicator));
             motorDir3dWarning_->setVisible(false);
             grid->addWidget(motorDir3dWarning_, row + 1, 0, 1, 3);
         }
@@ -1093,7 +1102,7 @@ void MainWindow::maybeAutoPickBundledFirmware() {
     if (!refId) {
         firmwarePathEdit_->clear();
         firmwareStatusLabel_->setText("Waiting for ESC read...");
-        firmwareStatusLabel_->setStyleSheet("color: #6b7280;");
+        firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().textMuted));
         return;
     }
 
@@ -1104,14 +1113,14 @@ void MainWindow::maybeAutoPickBundledFirmware() {
         firmwarePathEdit_->setText(hexPath);
         QString fname = QFileInfo(hexPath).fileName();
         firmwareStatusLabel_->setText(QString::fromUtf8("\u2713 Bundled: %1").arg(fname));
-        firmwareStatusLabel_->setStyleSheet("color: #16a34a;");
+        firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
     } else {
         firmwarePathEdit_->clear();
         QString slug = normalizeTargetToSlug(refId->target);
         firmwareStatusLabel_->setText(
             QString::fromUtf8("\u2717 Bundled firmware not found for target=%1 pwm=%2 version=%3")
                 .arg(slug).arg(refId->pwmKhz).arg(version));
-        firmwareStatusLabel_->setStyleSheet("color: #dc2626;");
+        firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
     }
 }
 
@@ -1268,10 +1277,10 @@ void MainWindow::onPickFirmware() {
 
     if (QFileInfo::exists(path)) {
         firmwareStatusLabel_->setText("✓ File exists");
-        firmwareStatusLabel_->setStyleSheet("color: #16a34a;");
+        firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
     } else {
         firmwareStatusLabel_->setText("✗ File not found");
-        firmwareStatusLabel_->setStyleSheet("color: #dc2626;");
+        firmwareStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
     }
     updateUiState();
 }
@@ -1799,7 +1808,7 @@ void MainWindow::onC2Detect() {
 
     clearWarning();
     c2InterfaceStatusLabel_->setText("Detecting...");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #71717a;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().textMuted));
     uiHelloReceived_ = false;
 
     if (cli_->startC2Detect(port)) {
@@ -1819,7 +1828,7 @@ void MainWindow::onC2InstallUno() {
 
     clearWarning();
     c2InterfaceStatusLabel_->setText("Installing UNO firmware...");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #71717a;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().textMuted));
     uiHelloReceived_ = false;
 
     if (cli_->startC2Install(port, "uno")) {
@@ -1839,7 +1848,7 @@ void MainWindow::onC2InstallNano() {
 
     clearWarning();
     c2InterfaceStatusLabel_->setText("Installing Nano firmware...");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #71717a;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().textMuted));
     uiHelloReceived_ = false;
 
     if (cli_->startC2Install(port, "nano")) {
@@ -1859,7 +1868,7 @@ void MainWindow::onC2ReadInfo() {
 
     clearWarning();
     c2DeviceInfoLabel_->setText("Reading...");
-    c2DeviceInfoLabel_->setStyleSheet("color: #71717a;");
+    c2DeviceInfoLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().textMuted));
     uiHelloReceived_ = false;
 
     if (cli_->startC2ReadInfo(port)) {
@@ -1923,9 +1932,9 @@ void MainWindow::onC2Write() {
         c2WizardActive_ = true;
         c2WizardStatusLabel_->setVisible(true);
         c2WizardStatusLabel_->setText(QString("Connect ESC #1, then click 'Flash ESC #1'\n\nProgress: 0/%1").arg(c2WizardTotal_));
-        c2WizardStatusLabel_->setStyleSheet("color: #2563eb; padding: 8px;");
+        c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().badgeBusyFg));
         c2WriteBtn_->setText("Flash ESC #1");
-        c2WriteBtn_->setStyleSheet("QPushButton { background-color: #16a34a; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #15803d; } QPushButton:disabled { opacity: 0.5; }");
+        c2WriteBtn_->setStyleSheet(greenButtonStyle(currentTheme()));
         c2CancelBatchBtn_->setVisible(true);
         appendLog(QString("C2 Batch: Starting flash of %1 ESCs").arg(c2WizardTotal_));
         return;
@@ -1963,7 +1972,7 @@ void MainWindow::onC2ModeChanged(int index) {
         c2WizardStatusLabel_->setVisible(false);
         c2CancelBatchBtn_->setVisible(false);
         c2WriteBtn_->setText("Erase + Write");
-        c2WriteBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+        c2WriteBtn_->setStyleSheet(primaryButtonStyle(currentTheme()));
     }
 }
 
@@ -1977,7 +1986,7 @@ void MainWindow::onC2CancelBatch() {
     c2ProgressBar_->setVisible(false);
     c2ProgressLabel_->clear();
     c2WriteBtn_->setText("Erase + Write");
-    c2WriteBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+    c2WriteBtn_->setStyleSheet(primaryButtonStyle(currentTheme()));
     c2WriteBtn_->setEnabled(true);
     appendLog("C2 Batch: Cancelled");
 }
@@ -1996,7 +2005,7 @@ void MainWindow::c2BatchAdvance() {
 
     c2WizardStatusLabel_->setText(QString("Flashing ESC #%1...\n\nProgress: %2/%3")
         .arg(escNum).arg(escNum - 1).arg(c2WizardTotal_));
-    c2WizardStatusLabel_->setStyleSheet("color: #b45309; padding: 8px;");
+    c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().dirtyIndicator));
     c2WriteBtn_->setEnabled(false);
     c2WriteBtn_->setText("Flashing...");
 
@@ -2013,7 +2022,7 @@ void MainWindow::c2BatchAdvance() {
         updateUiState();
     } else {
         c2WizardStatusLabel_->setText(QString("Failed to start ESC #%1").arg(escNum));
-        c2WizardStatusLabel_->setStyleSheet("color: #dc2626; padding: 8px;");
+        c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().errorFg));
         c2WriteBtn_->setEnabled(true);
         c2WriteBtn_->setText("Retry ESC #" + QString::number(escNum));
         c2WizardCurrent_--;
@@ -2024,14 +2033,14 @@ void MainWindow::c2BatchAdvance() {
 
 void MainWindow::handleC2DetectOk(const QJsonObject& /*ev*/) {
     c2InterfaceStatusLabel_->setText("✓ Interface detected");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #16a34a;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
     appendLog("C2: Interface detected");
 }
 
 void MainWindow::handleC2DetectFail(const QJsonObject& ev) {
     QString error = ev.value("error").toString("Detection failed");
     c2InterfaceStatusLabel_->setText("✗ Not detected");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #dc2626;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
     appendLog("C2: Interface not detected - " + error);
 }
 
@@ -2042,10 +2051,10 @@ void MainWindow::handleC2TargetInfo(const QJsonObject& ev) {
 
     if (warning == "target_not_connected") {
         c2DeviceInfoLabel_->setText("⚠ Target not connected (ID=0xFF)");
-        c2DeviceInfoLabel_->setStyleSheet("color: #b45309;");
+        c2DeviceInfoLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().dirtyIndicator));
     } else {
         c2DeviceInfoLabel_->setText(QString("Device ID: %1  Revision: %2").arg(deviceId, revision));
-        c2DeviceInfoLabel_->setStyleSheet("color: #16a34a;");
+        c2DeviceInfoLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
     }
     appendLog(QString("C2: Device ID=%1 Revision=%2").arg(deviceId, revision));
 }
@@ -2053,7 +2062,7 @@ void MainWindow::handleC2TargetInfo(const QJsonObject& ev) {
 void MainWindow::handleC2ReadInfoFail(const QJsonObject& ev) {
     QString error = ev.value("error").toString("Read info failed");
     c2DeviceInfoLabel_->setText("✗ " + error);
-    c2DeviceInfoLabel_->setStyleSheet("color: #dc2626;");
+    c2DeviceInfoLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
     appendLog("C2: Read info failed - " + error);
 }
 
@@ -2061,9 +2070,8 @@ void MainWindow::handleC2EraseOk(const QJsonObject& /*ev*/) {
     c2ProgressLabel_->setText("Erase OK, writing...");
     appendLog("C2: Erase OK");
     
-    // If in batch mode, restore green button style (in case we were retrying after failure)
     if (c2WizardActive_) {
-        c2WriteBtn_->setStyleSheet("QPushButton { background-color: #16a34a; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #15803d; } QPushButton:disabled { opacity: 0.5; }");
+        c2WriteBtn_->setStyleSheet(greenButtonStyle(currentTheme()));
     }
 }
 
@@ -2081,11 +2089,11 @@ void MainWindow::handleC2EraseFail(const QJsonObject& ev) {
     if (c2WizardActive_) {
         int escNum = c2WizardCurrent_;
         c2WriteBtn_->setText(QString("Retry ESC #%1").arg(escNum));
-        c2WriteBtn_->setStyleSheet("QPushButton { background-color: #dc2626; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #b91c1c; } QPushButton:disabled { opacity: 0.5; }");
+        c2WriteBtn_->setStyleSheet(redButtonStyle(currentTheme()));
         c2WriteBtn_->setEnabled(true);
         c2WizardStatusLabel_->setText(QString("Erase failed for ESC #%1\n\nCheck battery connection and retry\n\nProgress: %2/%3")
             .arg(escNum).arg(escNum - 1).arg(c2WizardTotal_));
-        c2WizardStatusLabel_->setStyleSheet("color: #dc2626; padding: 8px;");
+        c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().errorFg));
         c2WizardCurrent_--;  // Allow retry of same ESC
     } else {
         // Single mode - just re-enable button
@@ -2127,21 +2135,21 @@ void MainWindow::handleC2WriteOk(const QJsonObject& ev) {
             c2WizardActive_ = false;
             c2CancelBatchBtn_->setVisible(false);
             c2WriteBtn_->setText("Erase + Write");
-            c2WriteBtn_->setStyleSheet("QPushButton { background-color: #18181b; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #27272a; } QPushButton:disabled { opacity: 0.5; }");
+            c2WriteBtn_->setStyleSheet(primaryButtonStyle(currentTheme()));
             c2WriteBtn_->setEnabled(true);
             c2WizardStatusLabel_->setText(QString("✓ All %1 ESCs flashed!").arg(c2WizardTotal_));
-            c2WizardStatusLabel_->setStyleSheet("color: #16a34a; padding: 8px;");
+            c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().successFg));
             appendLog(QString("C2 Batch: Completed! All %1 ESCs flashed").arg(c2WizardTotal_));
             showC2PostWriteNotice();
         } else {
             // Prompt for next ESC
             int nextEsc = c2WizardCurrent_ + 1;
             c2WriteBtn_->setText(QString("Flash ESC #%1").arg(nextEsc));
-            c2WriteBtn_->setStyleSheet("QPushButton { background-color: #16a34a; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #15803d; } QPushButton:disabled { opacity: 0.5; }");
+            c2WriteBtn_->setStyleSheet(greenButtonStyle(currentTheme()));
             c2WriteBtn_->setEnabled(true);
             c2WizardStatusLabel_->setText(QString("✓ ESC #%1 done! Connect ESC #%2, click 'Flash ESC #%2'\n\nProgress: %1/%3")
                 .arg(escNum).arg(nextEsc).arg(c2WizardTotal_));
-            c2WizardStatusLabel_->setStyleSheet("color: #16a34a; padding: 8px;");
+            c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().successFg));
         }
     } else {
         showC2PostWriteNotice();
@@ -2158,11 +2166,11 @@ void MainWindow::handleC2WriteFail(const QJsonObject& ev) {
     if (c2WizardActive_) {
         int escNum = c2WizardCurrent_;
         c2WriteBtn_->setText(QString("Retry ESC #%1").arg(escNum));
-        c2WriteBtn_->setStyleSheet("QPushButton { background-color: #dc2626; color: white; padding: 8px 16px; border-radius: 4px; } QPushButton:hover { background-color: #b91c1c; } QPushButton:disabled { opacity: 0.5; }");
+        c2WriteBtn_->setStyleSheet(redButtonStyle(currentTheme()));
         c2WriteBtn_->setEnabled(true);
         c2WizardStatusLabel_->setText(QString("Write failed for ESC #%1: %2\n\nCheck connection and retry\n\nProgress: %3/%4")
             .arg(escNum).arg(error).arg(escNum - 1).arg(c2WizardTotal_));
-        c2WizardStatusLabel_->setStyleSheet("color: #dc2626; padding: 8px;");
+        c2WizardStatusLabel_->setStyleSheet(QString("color: %1; padding: 8px;").arg(currentTheme().errorFg));
         c2WizardCurrent_--;  // Allow retry of same ESC
     } else {
         // Single mode - re-enable button
@@ -2173,14 +2181,14 @@ void MainWindow::handleC2WriteFail(const QJsonObject& ev) {
 void MainWindow::handleC2InstallOk(const QJsonObject& ev) {
     QString board = ev.value("board").toString();
     c2InterfaceStatusLabel_->setText(QString("✓ %1 firmware installed").arg(board.toUpper()));
-    c2InterfaceStatusLabel_->setStyleSheet("color: #16a34a;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().successFg));
     appendLog("C2: Interface firmware installed");
 }
 
 void MainWindow::handleC2InstallFail(const QJsonObject& ev) {
     QString error = ev.value("error").toString("Install failed");
     c2InterfaceStatusLabel_->setText("✗ Install failed");
-    c2InterfaceStatusLabel_->setStyleSheet("color: #dc2626;");
+    c2InterfaceStatusLabel_->setStyleSheet(QString("color: %1;").arg(currentTheme().errorFg));
     appendLog("C2: Install failed - " + error);
     showWarning("C2 install failed: " + error + "\n\nMake sure avrdude is installed and in your PATH.");
 }
@@ -2273,8 +2281,8 @@ void MainWindow::onUpdateCheckFinished(QNetworkReply* reply) {
 
     QString url = doc.object().value("html_url").toString();
     updateLabel_->setText(
-        QString(" &nbsp; <a href='%1' style='color:#dc2626;'>Update available: v%2</a>")
-            .arg(url, remote));
+        QString(" &nbsp; <a href='%1' style='color:%2;'>Update available: v%3</a>")
+            .arg(url, currentTheme().linkColor, remote));
     updateLabel_->setVisible(true);
 }
 

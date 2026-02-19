@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(esctool VERSION 1.1.1 LANGUAGES CXX)
+project(esctool VERSION 1.1.2 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -57,6 +57,10 @@ target_link_libraries(prober_cli PRIVATE esctool_core)
 
 if(WIN32)
   target_link_libraries(esctool_core PRIVATE setupapi)
+endif()
+
+if(MINGW)
+  target_link_options(prober_cli PRIVATE -static-libgcc -static-libstdc++ -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive,-Bdynamic)
 endif()
 
 option(BUILD_GUI "Build native Qt GUI" ON)

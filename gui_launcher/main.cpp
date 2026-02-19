@@ -1,4 +1,4 @@
-// Launcher stub that starts the real Qt GUI from tools\gui\.
+#ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <string>
@@ -24,7 +24,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         return 1;
     }
 
-    // Forward argv to the real exe
     std::string cmdLine = "\"" + implPath + "\"";
     LPSTR origArgs = GetCommandLineA();
     if (origArgs) {
@@ -42,7 +41,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
         }
     }
 
-    // Prepend tools\gui to PATH for Qt DLLs
     std::string guiDir = dir + "\\tools\\gui";
     char oldPath[32768] = {};
     GetEnvironmentVariableA("PATH", oldPath, sizeof(oldPath));
@@ -68,9 +66,55 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     }
 
     WaitForInputIdle(pi.hProcess, 2000);
-
     CloseHandle(pi.hProcess);
     CloseHandle(pi.hThread);
-
     return 0;
 }
+
+#else
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <string>
+#include <vector>
+#include <unistd.h>
+#include <limits.h>
+#include <sys/stat.h>
+
+static std::string selfDir() {
+    char buf[PATH_MAX] = {};
+    ssize_t len = readlink("/proc/self/exe", buf, sizeof(buf) - 1);
+    if (len <= 0) return ".";
+    std::string path(buf, len);
+    auto slash = path.find_last_of('/');
+    return (slash != std::string::npos) ? path.substr(0, slash) : ".";
+}
+
+int main(int argc, char* argv[]) {
+    std::string dir = selfDir();
+    std::string implPath = dir + "/tools/gui/prober_gui_impl";
+
+    struct stat st{};
+    if (stat(implPath.c_str(), &st) != 0) {
+        fprintf(stderr, "prober: could not find GUI implementation:\n  %s\n"
+                        "Make sure the distribution is intact.\n", implPath.c_str());
+        return 1;
+    }
+
+    std::string guiDir = dir + "/tools/gui";
+    const char* oldLdPath = getenv("LD_LIBRARY_PATH");
+    std::string newLdPath = guiDir + (oldLdPath ? std::string(":") + oldLdPath : "");
+    setenv("LD_LIBRARY_PATH", newLdPath.c_str(), 1);
+
+    std::vector<char*> newArgv;
+    newArgv.push_back(const_cast<char*>(implPath.c_str()));
+    for (int i = 1; i < argc; ++i) newArgv.push_back(argv[i]);
+    newArgv.push_back(nullptr);
+
+    execv(implPath.c_str(), newArgv.data());
+    perror("prober: execv failed");
+    return 1;
+}
+
+#endif

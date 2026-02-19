@@ -45,7 +45,7 @@ elseif(UNIX)
     # 'rt' is needed on some Linuxes; harmless where absent
     target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads rt)
 else() # Windows / MinGW
-    target_link_libraries(${PROJECT_NAME} PRIVATE setupapi)
+    target_link_libraries(${PROJECT_NAME} PRIVATE setupapi cfgmgr32)
 endif()
 
 add_executable(serial_example examples/serial_example.cc)

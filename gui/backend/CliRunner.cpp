@@ -16,9 +16,14 @@ namespace gui {
 CliRunner::CliRunner(QObject* parent)
     : QObject(parent)
 {
+#ifdef _WIN32
+    static const QString cliExeName = "prober.exe";
+#else
+    static const QString cliExeName = "prober";
+#endif
     QString appDir = QCoreApplication::applicationDirPath();
-    QString sameDirCli = QDir(appDir).filePath("prober.exe");
-    QString distCli = QDir(appDir).filePath("../../prober.exe");
+    QString sameDirCli = QDir(appDir).filePath(cliExeName);
+    QString distCli = QDir(appDir).filePath("../../" + cliExeName);
     if (QFileInfo::exists(sameDirCli)) {
         cliPath_ = sameDirCli;
     } else if (QFileInfo::exists(distCli)) {
