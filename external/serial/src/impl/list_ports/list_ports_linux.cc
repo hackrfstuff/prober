@@ -127,7 +127,6 @@ serial::list_ports()
         string name = entry->d_name;
         if (name == "." || name == "..") continue;
 
-    while( iter != devices_found.end() )
         string device_link = sysfs_tty + "/" + name + "/device";
 
         if (!path_exists(device_link)) continue;
