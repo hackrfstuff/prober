@@ -41,12 +41,6 @@ target_link_libraries(prober_gui PRIVATE
     Qt6::Network
 )
 
-if(MINGW)
-    target_link_options(prober_gui PRIVATE
-        -static-libgcc -static-libstdc++
-        -Wl,-Bstatic,--whole-archive -lwinpthread -Wl,--no-whole-archive,-Bdynamic)
-endif()
-
 target_include_directories(prober_gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/include

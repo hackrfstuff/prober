@@ -344,6 +344,21 @@ dist/
 
 ---
 
+## Bundled Tools & Attribution
+
+The `tools/` directory contains third-party binaries and firmware bundled for ease of installation. This allows the application to work out-of-the-box without requiring users to manually download and configure external dependencies.
+
+| Component | Path | Source | License |
+|-----------|------|--------|---------|
+| **Bluejay firmware** | `tools/bluejay_firmware/` | [bird-sanctuary/bluejay](https://github.com/bird-sanctuary/bluejay) | GPL-3.0 |
+| **avrdude** | `tools/avrdude/` | [avrdudes/avrdude](https://github.com/avrdudes/avrdude) | GPL-2.0 |
+| **C2 firmware** | `tools/c2_firmware/` | [stylesuxx/arduino-c2-flasher](https://github.com/stylesuxx/arduino-c2-flasher) | GPL-3.0 |
+| **CSerialPort** | (build dependency) | [itas109/CSerialPort](https://github.com/itas109/CSerialPort) | LGPL-3.0 |
+
+Bluejay hex files are byte-identical copies from [official releases](https://github.com/bird-sanctuary/bluejay/releases). Use `--hex <path>` to flash any hex file you trust.
+
+---
+
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).

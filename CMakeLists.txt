@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(esctool VERSION 1.1.2 LANGUAGES CXX)
+project(esctool VERSION 1.1.3 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -13,15 +13,26 @@ configure_file(
 )
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/include)
 
-option(ESCTOOL_WITH_DESKTOP_TRANSPORT "Build desktop serial transport (wjwwood/serial)" ON)
+option(ESCTOOL_WITH_DESKTOP_TRANSPORT "Build desktop serial transport" ON)
 
 if(ESCTOOL_WITH_DESKTOP_TRANSPORT)
-  add_subdirectory(external/serial)
+  include(FetchContent)
+  FetchContent_Declare(
+    CSerialPort
+    GIT_REPOSITORY https://github.com/itas109/CSerialPort.git
+    GIT_TAG        v4.3.3
+    GIT_SHALLOW    TRUE
+  )
+  set(CSERIALPORT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+  set(CSERIALPORT_BUILD_TEST OFF CACHE BOOL "" FORCE)
+  set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+  FetchContent_MakeAvailable(CSerialPort)
+  set(CSERIALPORT_INCLUDE_DIR ${cserialport_SOURCE_DIR}/include)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-add_library(esctool_core
+add_library(esctool_core STATIC
   src/Log.cpp
   src/Utils.cpp
   src/MSP.cpp
@@ -35,16 +46,17 @@ add_library(esctool_core
 )
 
 if(ESCTOOL_WITH_DESKTOP_TRANSPORT)
-  target_sources(esctool_core PRIVATE src/transport/SerialWjwwood.cpp)
-  target_include_directories(esctool_core PRIVATE src/transport)
-  target_link_libraries(esctool_core PRIVATE serial)
+  target_sources(esctool_core PRIVATE src/transport/SerialCSerialPort.cpp)
+  target_include_directories(esctool_core PRIVATE src/transport ${CSERIALPORT_INCLUDE_DIR})
+  target_link_libraries(esctool_core PRIVATE libcserialport)
 endif()
 add_executable(prober_cli src/flasher_main.cpp)
 set_target_properties(prober_cli PROPERTIES OUTPUT_NAME "prober")
 target_include_directories(prober_cli PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/external/serial/include
   ${CMAKE_CURRENT_SOURCE_DIR}/src/transport
+  ${CSERIALPORT_INCLUDE_DIR}
 )
+target_link_libraries(prober_cli PRIVATE libcserialport)
 
 if(MSVC)
   target_compile_options(esctool_core PRIVATE /W4)

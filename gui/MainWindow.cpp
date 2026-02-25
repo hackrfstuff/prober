@@ -2266,17 +2266,27 @@ void MainWindow::checkForUpdates() {
 
 void MainWindow::onUpdateCheckFinished(QNetworkReply* reply) {
     reply->deleteLater();
-    if (reply->error() != QNetworkReply::NoError) return;
+    if (reply->error() != QNetworkReply::NoError) {
+        qDebug() << "Update check failed:" << reply->errorString();
+        return;
+    }
 
     QByteArray data = reply->readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) return;
+    if (!doc.isObject()) {
+        qDebug() << "Update check: invalid JSON";
+        return;
+    }
 
     QString tag = doc.object().value("tag_name").toString();
-    if (tag.isEmpty()) return;
+    if (tag.isEmpty()) {
+        qDebug() << "Update check: no tag_name";
+        return;
+    }
 
     QString remote = tag.startsWith('v') ? tag.mid(1) : tag;
     QString local = QString(PROBER_VERSION);
+    qDebug() << "Update check: local=" << local << "remote=" << remote;
     if (remote == local) return;
 
     QString url = doc.object().value("html_url").toString();

@@ -8,7 +8,7 @@
 #include "esctool/C2Flasher.h"
 #include "esctool/IntelHex.h"
 #include "esctool/version.h"
-#include "transport/SerialWjwwood.h"
+#include "transport/SerialCSerialPort.h"
 
 #include <iostream>
 #include <thread>
@@ -17,7 +17,7 @@
 #include <sstream>
 #include <fstream>
 #include <vector>
-#include <serial/serial.h>
+#include <CSerialPort/SerialPortInfo.h>
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -32,20 +32,23 @@ static std::string pick_port(Log& log, const std::string& forced){
   if (!forced.empty()) return forced;
   try{
     std::vector<std::string> picks; std::string first;
-    auto ports = serial::list_ports();
+    auto ports = itas109::CSerialPortInfo::availablePortInfos();
     for (auto& p : ports) {
-      if (first.empty()) first = p.port;
-      std::string hwid = p.hardware_id; for (auto& c:hwid) c = (char)toupper(c);
-      std::string vid, pid; auto pos = hwid.find("VID:PID=");
+      std::string portName = p.portName;
+      std::string desc = p.description;
+      std::string hwid = p.hardwareId;
+      if (first.empty()) first = portName;
+      for (auto& c:hwid) c = (char)toupper(c);
+      std::string vid, pid; auto pos = hwid.find("VID_");
       if (pos!=std::string::npos){
-        auto pair = hwid.substr(pos+8);
-        auto sp=pair.find(' '); if(sp!=std::string::npos) pair=pair.substr(0,sp);
-        auto colon=pair.find(':'); if(colon!=std::string::npos){ vid=pair.substr(0,colon); pid=pair.substr(colon+1); }
+        vid = hwid.substr(pos+4, 4);
+        auto pidpos = hwid.find("PID_");
+        if (pidpos!=std::string::npos) pid = hwid.substr(pidpos+4, 4);
       }
       if (!vid.empty() && !pid.empty()){
-        if ((vid=="0483"&&pid=="5740") || (vid=="10C4"&&pid=="EA60") || (vid=="1A86"&&pid=="7523")) picks.push_back(p.port);
+        if ((vid=="0483"&&pid=="5740") || (vid=="10C4"&&pid=="EA60") || (vid=="1A86"&&pid=="7523")) picks.push_back(portName);
       }
-      log.info("Port: "+p.port+" - "+p.description + (vid.empty()? std::string("") : (" [VID_"+vid+"&PID_"+pid+"]")));
+      log.info("Port: "+portName+" - "+desc + (vid.empty()? std::string("") : (" [VID_"+vid+"&PID_"+pid+"]")));
     }
     if (!picks.empty()) return picks.front();
     return first;
@@ -285,15 +288,15 @@ static std::string resolve_bundled_bluejay_hex(const std::string& exe_dir,
 }
 
 static void emit_port_list_json() {
-  auto ports = serial::list_ports();
+  auto ports = itas109::CSerialPortInfo::availablePortInfos();
   std::cout << "[";
   bool first = true;
   for (auto& p : ports) {
     if (!first) std::cout << ",";
     first = false;
-    std::cout << "{\"port\":\"" << json_escape(p.port) << "\"";
+    std::cout << "{\"port\":\"" << json_escape(p.portName) << "\"";
     std::cout << ",\"description\":\"" << json_escape(p.description) << "\"";
-    std::cout << ",\"hwid\":\"" << json_escape(p.hardware_id) << "\"}";
+    std::cout << ",\"hwid\":\"" << json_escape(p.hardwareId) << "\"}";
   }
   std::cout << "]\n";
 }
@@ -311,11 +314,11 @@ int main(int argc, char** argv){
       if (args.json) {
         emit_port_list_json();
       } else {
-        auto ports = serial::list_ports();
+        auto ports = itas109::CSerialPortInfo::availablePortInfos();
         for (auto& p : ports) {
-          std::cout << p.port;
-          if (!p.description.empty()) std::cout << " - " << p.description;
-          if (!p.hardware_id.empty()) std::cout << " (" << p.hardware_id << ")";
+          std::cout << p.portName;
+          if (p.description[0]) std::cout << " - " << p.description;
+          if (p.hardwareId[0]) std::cout << " (" << p.hardwareId << ")";
           std::cout << "\n";
         }
       }
@@ -490,7 +493,7 @@ int main(int argc, char** argv){
     }
 
     // Open serial at 1,000,000 baud for C2 (for non-install operations)
-    SerialWjwwood serial;
+    SerialCSerialPort serial;
     SerialOptions so;
     so.port = args.c2_port;
     so.baud = 1000000;
@@ -740,7 +743,7 @@ int main(int argc, char** argv){
     }
   }
 
-  SerialWjwwood serial; SerialOptions so; so.port = pick_port(log, args.port); so.baud=args.baud; so.timeout_ms=30;
+  SerialCSerialPort serial; SerialOptions so; so.port = pick_port(log, args.port); so.baud=args.baud; so.timeout_ms=30;
   if (so.port.empty()){ log.info("No serial ports found."); return 1; }
   if (!serial.open(so)){ log.info(std::string("Could not open ")+so.port); return 1; }
   log.info("Opened "+so.port+" @ "+std::to_string(args.baud)+" baud");
