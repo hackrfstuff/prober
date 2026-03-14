@@ -70,9 +70,14 @@ echo "[5/7] Copying tools..."
 AVRDUDE_SRC="$REPO_ROOT/tools/avrdude"
 AVRDUDE_DST="$DIST_DIR/tools/avrdude"
 mkdir -p "$AVRDUDE_DST"
-if [[ -f "$AVRDUDE_SRC/avrdude.conf" ]]; then
-    cp "$AVRDUDE_SRC/avrdude.conf" "$AVRDUDE_DST/"
-    echo "  avrdude.conf copied"
+if [[ -f "$AVRDUDE_SRC/avrdude" ]]; then
+    cp "$AVRDUDE_SRC/avrdude" "$AVRDUDE_DST/"
+    chmod +x "$AVRDUDE_DST/avrdude"
+    echo "  avrdude binary copied"
+fi
+if [[ -f "$AVRDUDE_SRC/avrdude_linux.conf" ]]; then
+    cp "$AVRDUDE_SRC/avrdude_linux.conf" "$AVRDUDE_DST/"
+    echo "  avrdude_linux.conf copied"
 fi
 
 C2_SRC="$REPO_ROOT/tools/c2_firmware"

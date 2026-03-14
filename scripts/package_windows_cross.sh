@@ -150,21 +150,6 @@ if [[ -f "$STYLES_SRC" ]]; then
     echo "  Copied: styles/qwindowsvistastyle.dll"
 fi
 
-TLS_DST="$GUI_DIST_DIR/tls"
-mkdir -p "$TLS_DST"
-TLS_SRC="$QT_PLUGINS/tls/qopensslbackend.dll"
-if [[ -f "$TLS_SRC" ]]; then
-    cp "$TLS_SRC" "$TLS_DST/"
-    echo "  Copied: tls/qopensslbackend.dll"
-fi
-for ssl_dll in libssl-3-x64.dll libcrypto-3-x64.dll; do
-    if [[ -f "$MINGW_BIN/$ssl_dll" ]]; then
-        cp "$MINGW_BIN/$ssl_dll" "$GUI_DIST_DIR/"
-        cp "$MINGW_BIN/$ssl_dll" "$TLS_DST/"
-        echo "  Copied: $ssl_dll"
-    fi
-done
-
 echo "[6/8] Copying tools..."
 
 AVRDUDE_SRC="$REPO_ROOT/tools/avrdude"

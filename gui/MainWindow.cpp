@@ -15,6 +15,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QNetworkRequest>
+#include <QProcess>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QScrollArea>
@@ -2257,43 +2258,37 @@ void MainWindow::showFlashPostWriteNotice() {
 }
 
 void MainWindow::checkForUpdates() {
-    netManager_ = new QNetworkAccessManager(this);
-    connect(netManager_, &QNetworkAccessManager::finished, this, &MainWindow::onUpdateCheckFinished);
-    QNetworkRequest req(QUrl("https://api.github.com/repos/hackrfstuff/prober/releases/latest"));
-    req.setHeader(QNetworkRequest::UserAgentHeader, "prober-gui");
-    netManager_->get(req);
-}
-
-void MainWindow::onUpdateCheckFinished(QNetworkReply* reply) {
-    reply->deleteLater();
-    if (reply->error() != QNetworkReply::NoError) {
-        qDebug() << "Update check failed:" << reply->errorString();
-        return;
-    }
-
-    QByteArray data = reply->readAll();
-    QJsonDocument doc = QJsonDocument::fromJson(data);
-    if (!doc.isObject()) {
-        qDebug() << "Update check: invalid JSON";
-        return;
-    }
-
-    QString tag = doc.object().value("tag_name").toString();
-    if (tag.isEmpty()) {
-        qDebug() << "Update check: no tag_name";
-        return;
-    }
-
-    QString remote = tag.startsWith('v') ? tag.mid(1) : tag;
-    QString local = QString(PROBER_VERSION);
-    qDebug() << "Update check: local=" << local << "remote=" << remote;
-    if (remote == local) return;
-
-    QString url = doc.object().value("html_url").toString();
-    updateLabel_->setText(
-        QString(" &nbsp; <a href='%1' style='color:%2;'>Update available: v%3</a>")
-            .arg(url, currentTheme().linkColor, remote));
-    updateLabel_->setVisible(true);
+    auto* proc = new QProcess(this);
+    connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
+            this, [this, proc](int exitCode, QProcess::ExitStatus) {
+        proc->deleteLater();
+        if (exitCode != 0) return;
+        
+        QByteArray data = proc->readAllStandardOutput();
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isObject()) return;
+        
+        QString tag = doc.object().value("tag_name").toString();
+        if (tag.isEmpty()) return;
+        
+        QString remote = tag.startsWith('v') ? tag.mid(1) : tag;
+        QString local = QString(PROBER_VERSION);
+        if (remote == local) return;
+        
+        QString url = doc.object().value("html_url").toString();
+        updateLabel_->setText(
+            QString(" &nbsp; <a href='%1' style='color:%2;'>Update available: v%3</a>")
+                .arg(url, currentTheme().linkColor, remote));
+        updateLabel_->setVisible(true);
+    });
+    
+#ifdef _WIN32
+    proc->start("powershell", QStringList() << "-Command" 
+        << "(Invoke-WebRequest -Uri 'https://api.github.com/repos/hackrfstuff/prober/releases/latest' -UseBasicParsing).Content");
+#else
+    proc->start("curl", QStringList() << "-s" << "-H" << "User-Agent: prober-gui"
+        << "https://api.github.com/repos/hackrfstuff/prober/releases/latest");
+#endif
 }
 
 }

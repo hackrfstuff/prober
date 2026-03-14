@@ -380,19 +380,23 @@ int main(int argc, char** argv){
           size_t last_sep = exe_dir.find_last_of("\\/");
           if (last_sep != std::string::npos) exe_dir = exe_dir.substr(0, last_sep);
         }
+#else
+        char path_buf[4096];
+        ssize_t len = readlink("/proc/self/exe", path_buf, sizeof(path_buf) - 1);
+        if (len > 0) {
+          path_buf[len] = '\0';
+          exe_dir = std::string(path_buf);
+          size_t last_sep = exe_dir.find_last_of('/');
+          if (last_sep != std::string::npos) exe_dir = exe_dir.substr(0, last_sep);
+        }
 #endif
         std::vector<std::string> hex_search_paths;
         if (!exe_dir.empty()) {
-          // Packaged layout (primary): dist/tools/c2_firmware/
-          hex_search_paths.push_back(exe_dir + "\\tools\\c2_firmware\\uno_nano.hex");
-          // Dev convenience: exe is in build/, firmware in repo tools/
-          hex_search_paths.push_back(exe_dir + "\\..\\tools\\c2_firmware\\uno_nano.hex");
-          hex_search_paths.push_back(exe_dir + "\\..\\..\\tools\\c2_firmware\\uno_nano.hex");
+          hex_search_paths.push_back(exe_dir + "/tools/c2_firmware/uno_nano.hex");
+          hex_search_paths.push_back(exe_dir + "/../tools/c2_firmware/uno_nano.hex");
+          hex_search_paths.push_back(exe_dir + "/../../tools/c2_firmware/uno_nano.hex");
         }
-        // CWD fallback
-        hex_search_paths.push_back("tools\\c2_firmware\\uno_nano.hex");
-        // Legacy fallback (original project layout)
-        hex_search_paths.push_back("arduino-c2-flasher-main\\public\\bins\\uno_nano.hex");
+        hex_search_paths.push_back("tools/c2_firmware/uno_nano.hex");
 
         for (const auto& p : hex_search_paths) {
           std::ifstream check(p);
@@ -419,6 +423,7 @@ int main(int argc, char** argv){
       std::string avrdude_conf;
       {
         std::string exe_dir;
+        std::vector<std::string> search_paths;
 #ifdef _WIN32
         char path_buf[MAX_PATH];
         DWORD len = GetModuleFileNameA(NULL, path_buf, MAX_PATH);
@@ -427,14 +432,28 @@ int main(int argc, char** argv){
           size_t last_sep = exe_dir.find_last_of("\\/");
           if (last_sep != std::string::npos) exe_dir = exe_dir.substr(0, last_sep);
         }
-#endif
-        std::vector<std::string> search_paths;
         if (!exe_dir.empty()) {
           search_paths.push_back(exe_dir + "\\tools\\avrdude\\avrdude.exe");
           search_paths.push_back(exe_dir + "\\..\\tools\\avrdude\\avrdude.exe");
           search_paths.push_back(exe_dir + "\\..\\..\\tools\\avrdude\\avrdude.exe");
         }
         search_paths.push_back("tools\\avrdude\\avrdude.exe");
+#else
+        char path_buf[4096];
+        ssize_t len = readlink("/proc/self/exe", path_buf, sizeof(path_buf) - 1);
+        if (len > 0) {
+          path_buf[len] = '\0';
+          exe_dir = std::string(path_buf);
+          size_t last_sep = exe_dir.find_last_of('/');
+          if (last_sep != std::string::npos) exe_dir = exe_dir.substr(0, last_sep);
+        }
+        if (!exe_dir.empty()) {
+          search_paths.push_back(exe_dir + "/tools/avrdude/avrdude");
+          search_paths.push_back(exe_dir + "/../tools/avrdude/avrdude");
+          search_paths.push_back(exe_dir + "/../../tools/avrdude/avrdude");
+        }
+        search_paths.push_back("tools/avrdude/avrdude");
+#endif
         
         for (const auto& p : search_paths) {
           std::ifstream check(p);
@@ -443,9 +462,15 @@ int main(int argc, char** argv){
             std::replace(avrdude_path.begin(), avrdude_path.end(), '\\', '/');
             avrdude = "\"" + avrdude_path + "\"";
             std::string conf_path = p;
+#ifdef _WIN32
             size_t exe_pos = conf_path.rfind("avrdude.exe");
             if (exe_pos != std::string::npos) {
               conf_path = conf_path.substr(0, exe_pos) + "avrdude.conf";
+#else
+            size_t exe_pos = conf_path.rfind("avrdude");
+            if (exe_pos != std::string::npos) {
+              conf_path = conf_path.substr(0, exe_pos) + "avrdude_linux.conf";
+#endif
               std::ifstream conf_check(conf_path);
               if (conf_check.good()) {
                 std::replace(conf_path.begin(), conf_path.end(), '\\', '/');
@@ -460,15 +485,22 @@ int main(int argc, char** argv){
 
       std::string mcu = "atmega328p";
       std::string programmer = "arduino";
-      std::string flash_arg = "flash:w:" + hex_path + ":i";
       
       std::vector<int> baud_rates = {115200, 57600};
       int ret = 1;
       
       for (int upload_baud : baud_rates) {
+#ifdef _WIN32
+        std::string flash_arg = "\"flash:w:" + hex_path + ":i\"";
         std::string cmd = "cmd /c \"" + avrdude + avrdude_conf + " -p " + mcu + " -c " + programmer + 
                           " -P " + args.c2_port + " -b " + std::to_string(upload_baud) +
                           " -U " + flash_arg + "\"";
+#else
+        std::string flash_arg = "flash:w:" + hex_path + ":i";
+        std::string cmd = avrdude + avrdude_conf + " -p " + mcu + " -c " + programmer + 
+                          " -P " + args.c2_port + " -b " + std::to_string(upload_baud) +
+                          " -U " + flash_arg;
+#endif
 
         log.info("C2: Trying baud " + std::to_string(upload_baud) + "...");
         ndjson_emit(args.ui_json, "{\"type\":\"c2_install_progress\",\"step\":\"upload\",\"message\":\"Trying baud " + std::to_string(upload_baud) + "...\"}");
